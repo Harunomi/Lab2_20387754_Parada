@@ -101,3 +101,59 @@ getUsuariosRedSocial([_,_,Usuarios,_,_],Usuarios).
 getPublicacionesRedSocial([_,_,_,Publciaciones,_],Publicaciones).
 getUsuarioOnline([_,_,_,_,UsuarioOnline],UsuarioOnline).
 
+/*
+  ___             _ _ _                     
+ / _ \           (_) (_)                    
+/ /_\ \_   ___  ___| |_  __ _ _ __ ___  ___ 
+|  _  | | | \ \/ / | | |/ _` | '__/ _ \/ __|
+| | | | |_| |>  <| | | | (_| | | |  __/\__ \
+\_| |_/\__,_/_/\_\_|_|_|\__,_|_|  \___||___/
+*/
+% Dominio: lista x String
+% Descripcion: permite buscar en una lista de usuarios si este existe o no
+buscarUsuario([H|_],Usuario):-
+    getUsername(H,Username),
+    (Usuario = Username).
+
+buscarUsuario([_|T],Usuario):-
+    buscarUsuario(T,Usuario).
+
+buscarUsuarioPassword([H|_],Usuario,Password):-
+    getUsername(H,Username),
+    getPassword(H,Contrasena),
+    (Usuario = Username),
+    (Password = Contrasena).
+buscarUsuarioPassword([_|T],Usuario,Password):-
+    buscarUsuarioPassword(T,Usuario,Password).
+
+largo_lista(Xs,L) :- largo_lista(Xs,0,L) .
+
+largo_lista( []     , L , L ) .
+largo_lista( [_|Xs] , T , L ) :-
+  T1 is T+1 ,
+  largo_lista(Xs,T1,L).
+
+
+/*
+______                _                   _           
+|  ___|              (_)                 | |          
+| |_ _   _ _ __   ___ _  ___  _ __   __ _| | ___  ___ 
+|  _| | | | '_ \ / __| |/ _ \| '_ \ / _` | |/ _ \/ __|
+| | | |_| | | | | (__| | (_) | | | | (_| | |  __/\__ \
+\_|  \__,_|_| |_|\___|_|\___/|_| |_|\__,_|_|\___||___/
+                                                      
+*/
+
+register(RSin,Fecha,Username,Password,RSout):-
+    string(Username),
+    string(Password),
+    getNombreRedSocial(RSin,Nombre),
+    getFechaRedSocial(RSin,FechaRS),
+    getUsuariosRedSocial(RSin,Usuarios),
+    getPublicacionesRedSocial(RSin,Publicaciones),
+    getUsuarioOnline(RSin,UsuarioOnline),
+    not(buscarUsuario(Usuarios,Username)),!,
+    crearUsuario(largo_lista(ID,Usuarios),Username,Password,Fecha,[],[],NuevoUsuario),
+    append(Usuarios,[NuevoUsuario],UsuariosNuevos),
+    crearRedSocial(Nombre,FechaRS,UsuariosNuevos,Publicaciones,UsuarioOnline,RSout).
+
