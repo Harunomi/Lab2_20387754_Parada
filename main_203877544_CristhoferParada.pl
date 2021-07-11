@@ -1,4 +1,5 @@
 /*
+%     set_prolog_flag(answer_write_options,[max_depth(0)]).
 ______        _           
 |  ___|      | |          
 | |_ ___  ___| |__   __ _ 
@@ -91,14 +92,14 @@ crearRS(Nombre,Fecha,RS):-
     crearRedSocial(Nombre,Fecha,[],[],0,RS).
 
 crearRedSocial(Nombre,Fecha,Usuarios,Publicaciones,UsuarioOnline,RS):-
-    string(Nombre),is_list(Fecha),is_list(Usuarios),is_list(Publicaciones),number(UsuarioOnline),
+    string(Nombre),number(UsuarioOnline),is_list(Fecha),is_list(Usuarios),is_list(Publicaciones),
     RS = [Nombre,Fecha,Usuarios,Publicaciones,UsuarioOnline].
 
 % SELECTORES
 getNombreRedSocial([Nombre,_,_,_,_],Nombre).
 getFechaRedSocial([_,Fecha,_,_,_],Fecha).
 getUsuariosRedSocial([_,_,Usuarios,_,_],Usuarios).
-getPublicacionesRedSocial([_,_,_,Publciaciones,_],Publicaciones).
+getPublicacionesRedSocial([_,_,_,Publicaciones,_],Publicaciones).
 getUsuarioOnline([_,_,_,_,UsuarioOnline],UsuarioOnline).
 
 /*
@@ -118,6 +119,8 @@ buscarUsuario([H|_],Usuario):-
 buscarUsuario([_|T],Usuario):-
     buscarUsuario(T,Usuario).
 
+% Dominio: list x string x string
+% Descripcion: permite buscar un usuario por su nombre de usuario y contrasena
 buscarUsuarioPassword([H|_],Usuario,Password):-
     getUsername(H,Username),
     getPassword(H,Contrasena),
@@ -126,7 +129,9 @@ buscarUsuarioPassword([H|_],Usuario,Password):-
 buscarUsuarioPassword([_|T],Usuario,Password):-
     buscarUsuarioPassword(T,Usuario,Password).
 
-largo_lista(Xs,L) :- largo_lista(Xs,0,L) .
+% Dominio: list x Var
+% Descripcion: Permite obtener el largo de una lista
+largo_lista(Xs,L) :- largo_lista(Xs,1,L) .
 
 largo_lista( []     , L , L ) .
 largo_lista( [_|Xs] , T , L ) :-
@@ -153,7 +158,8 @@ register(RSin,Fecha,Username,Password,RSout):-
     getPublicacionesRedSocial(RSin,Publicaciones),
     getUsuarioOnline(RSin,UsuarioOnline),
     not(buscarUsuario(Usuarios,Username)),!,
-    crearUsuario(largo_lista(ID,Usuarios),Username,Password,Fecha,[],[],NuevoUsuario),
+    largo_lista(Usuarios,ID),
+    crearUsuario(ID,Username,Password,Fecha,[],[],NuevoUsuario),
     append(Usuarios,[NuevoUsuario],UsuariosNuevos),
     crearRedSocial(Nombre,FechaRS,UsuariosNuevos,Publicaciones,UsuarioOnline,RSout).
 
