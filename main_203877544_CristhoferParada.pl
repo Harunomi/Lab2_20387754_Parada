@@ -119,6 +119,15 @@ buscarUsuario([H|_],Usuario):-
 buscarUsuario([_|T],Usuario):-
     buscarUsuario(T,Usuario).
 
+% Dominio: string x list x Var
+% Descripcion: retorna la id de un usuario si es que existe.
+buscarIDUsuario([H|_],Usuario,Retorno):-
+    getUsername(H,Username),
+    (Usuario = Username),
+    getUsuarioID(H,Retorno).
+buscarIDUsuario([_|T],Usuario,Retorno):-
+    buscarIDUsuario(T,Usuario,Retorno).        
+
 % Dominio: list x string x string
 % Descripcion: permite buscar un usuario por su nombre de usuario y contrasena
 buscarUsuarioPassword([H|_],Usuario,Password):-
@@ -149,7 +158,9 @@ ______                _                   _
                                                       
 */
 
-register(RSin,Fecha,Username,Password,RSout):-
+% Dominio: red social x fecha x string x string x RedSocial 
+% Descripcion: Funcion que toma una red social y permite registrar un nuevo usuario
+socialNetworkRegister(RSin,Fecha,Username,Password,RSout):-
     string(Username),
     string(Password),
     getNombreRedSocial(RSin,Nombre),
@@ -162,4 +173,17 @@ register(RSin,Fecha,Username,Password,RSout):-
     crearUsuario(ID,Username,Password,Fecha,[],[],NuevoUsuario),
     append(Usuarios,[NuevoUsuario],UsuariosNuevos),
     crearRedSocial(Nombre,FechaRS,UsuariosNuevos,Publicaciones,UsuarioOnline,RSout).
+
+% Dominio: red social x string x string x socialnetwork
+% Descripcion: funcion que permite iniciar sesion a un usuario en una red social
+socialNetworkLogin(RSin,Username,Password,RSout):-
+    string(Username),
+    string(Password),
+    getNombreRedSocial(RSin,Nombre),
+    getFechaRedSocial(RSin,FechaRS),
+    getUsuariosRedSocial(RSin,Usuarios),
+    buscarUsuarioPassword(Usuarios,Username,Password),!,
+    getPublicacionesRedSocial(RSin,Publicaciones),
+    buscarIDUsuario(Usuarios,Username,ID),
+    crearRedSocial(Nombre,FechaRS,Usuarios,Publicaciones,ID,RSout).
 
