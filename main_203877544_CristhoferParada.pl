@@ -1,5 +1,6 @@
 /*
-%     set_prolog_flag(answer_write_options,[max_depth(0)]).
+%     set_prolog_flag(answer_write_options,[max_depth(0)]),use_module(library(theme/dark)),write('\e[2J').
+
 ______        _           
 |  ___|      | |          
 | |_ ___  ___| |__   __ _ 
@@ -119,14 +120,30 @@ buscarUsuario([H|_],Usuario):-
 buscarUsuario([_|T],Usuario):-
     buscarUsuario(T,Usuario).
 
-% Dominio: string x list x Var
+% Dominio: lista x number.
+% Descripcion: permite saber si existe una ID en una lista
+buscarID([H|_],ID):-
+    (H = ID).
+buscarID([_|T],ID):-
+    buscarID(T,ID).          
+
+% Dominio: list x string x Var
 % Descripcion: retorna la id de un usuario si es que existe.
 buscarIDUsuario([H|_],Usuario,Retorno):-
     getUsername(H,Username),
     (Usuario = Username),
     getUsuarioID(H,Retorno).
 buscarIDUsuario([_|T],Usuario,Retorno):-
-    buscarIDUsuario(T,Usuario,Retorno).        
+    buscarIDUsuario(T,Usuario,Retorno).     
+
+% Dominio: string x list x Var
+% Descripcion: a partir de un username, permite obtener el usuario completo.
+username_to_usuario([H|_],Usuario,Retorno):-
+    getUsername(H,Username),
+    (Usuario = Username),
+    Retorno = H.
+username_to_usuario([_|T],Usuario,Retorno):-
+    username_to_usuario(T,Usuario,Retorno).           
 
 % Dominio: list x string x string
 % Descripcion: permite buscar un usuario por su nombre de usuario y contrasena
@@ -138,14 +155,24 @@ buscarUsuarioPassword([H|_],Usuario,Password):-
 buscarUsuarioPassword([_|T],Usuario,Password):-
     buscarUsuarioPassword(T,Usuario,Password).
 
-% Dominio: list x Var
-% Descripcion: Permite obtener el largo de una lista
-largo_lista(Xs,L) :- largo_lista(Xs,1,L) .
+% Dominio: number x list x Var
+% Descripcion: permite eliminar un usuario o publicacion dada una ID de una lista
+eliminar_por_ID(_,[],[]).
 
-largo_lista( []     , L , L ) .
-largo_lista( [_|Xs] , T , L ) :-
+eliminar_por_ID(Y,[[Y|_]|Xs],Salida):-
+    eliminar_por_ID(Y,Xs,Salida),!.
+
+eliminar_por_ID(X,[Y|Xs],[Y|Salida]):-
+    eliminar_por_ID(X,Xs,Salida).    
+
+% Dominio: list x Var
+% Descripcion: Permite obtener el largo de una lista para el ID de un usuario o publicacion
+id_counter(Lista,ID) :- id_counter(Lista,1,ID) .
+
+id_counter( []     , ID , ID ) .
+id_counter( [_|Lista] , T , ID ) :-
   T1 is T+1 ,
-  largo_lista(Xs,T1,L).
+  id_counter(Lista,T1,ID).
 
 
 /*
@@ -169,7 +196,7 @@ socialNetworkRegister(RSin,Fecha,Username,Password,RSout):-
     getPublicacionesRedSocial(RSin,Publicaciones),
     getUsuarioOnline(RSin,UsuarioOnline),
     not(buscarUsuario(Usuarios,Username)),!,
-    largo_lista(Usuarios,ID),
+    id_counter(Usuarios,ID),
     crearUsuario(ID,Username,Password,Fecha,[],[],NuevoUsuario),
     append(Usuarios,[NuevoUsuario],UsuariosNuevos),
     crearRedSocial(Nombre,FechaRS,UsuariosNuevos,Publicaciones,UsuarioOnline,RSout).
@@ -184,6 +211,60 @@ socialNetworkLogin(RSin,Username,Password,RSout):-
     getUsuariosRedSocial(RSin,Usuarios),
     buscarUsuarioPassword(Usuarios,Username,Password),!,
     getPublicacionesRedSocial(RSin,Publicaciones),
-    buscarIDUsuario(Usuarios,Username,ID),
+    buscarIDUsuario(Usuarios,Username,ID),!,
     crearRedSocial(Nombre,FechaRS,Usuarios,Publicaciones,ID,RSout).
+
+% Dominio: RedSocial x fecha x string x string x RedSocial
+% Descripcion: funcion que permite a un usuario loggeado en la red social realizar una publicacion
+% socialNetworkPost(RSin,Fecha,Username,Password,RSout):-
+
+
+% Dominio: RedSocial x string x SocialNetwork
+% Descripcion: funcion que permite a un usuario con sesion iniciada darle follow a otro usuario que ya exista en la plataforma
+socialNetworkFollow(RSin,Username,RSout):-
+    string(Username),
+    getNombreRedSocial(RSin,Nombre),
+    getFechaRedSocial(RSin,FechaRS),
+    getUsuariosRedSocial(RSin,Usuarios),
+    getPublicacionesRedSocial(RSin,Publicaciones),
+    getUsuarioOnline(RSin,UsuarioOnline),
+    % me aseguro que el usuario objetivo exista
+    buscarUsuario(Usuarios,Username),!,
+    % retorno completamente el usuario dado su username
+    username_to_usuario(Usuarios,Username,Objetivo),
+    getUsuarioID(Objetivo,ObjetivoID),
+    getUsername(Objetivo,ObjetivoUsername),
+    getPassword(Objetivo,ObjetivoPassword),
+    getUserFecha(Objetivo,ObjetivoFecha),
+    getUserFollowers(Objetivo,ObjetivoFollowers),
+    getUserPosts(Objetivo,ObjetivoPosts),
+    % me aseguro que el usuario objetivo no tenga ya de amigo al usuario conectado
+    not(buscarID(ObjetivoFollowers,UsuarioOnline)),!,
+    append(ObjetivoFollowers,[UsuarioOnline],ObjetivoFollowersNuevo),
+    % Elimino el usuario objetivo para agregarlo nuevamente con el nuevo amigo
+    eliminar_por_ID(ObjetivoID,Usuarios,UsuariosNuevos),
+    crearUsuario(ObjetivoID,ObjetivoUsername,ObjetivoPassword,ObjetivoFecha,ObjetivoFollowersNuevo,ObjetivoPosts,UsuarioFinal),
+    append(UsuariosNuevos,[UsuarioFinal],UsuariosFinal),
+    crearRedSocial(Nombre,FechaRS,UsuariosFinal,Publicaciones,0,RSout).
+
+
+
+
+
+
+
+
+    
+/*
+ _____ _                      _           
+|  ___(_)                    | |          
+| |__  _  ___ _ __ ___  _ __ | | ___  ___ 
+|  __|| |/ _ \ '_ ` _ \| '_ \| |/ _ \/ __|
+| |___| |  __/ | | | | | |_) | | (_) \__ \
+\____/| |\___|_| |_| |_| .__/|_|\___/|___/
+     _/ |              | |                
+    |__/               |_|                   
+*/
+% fecha(11,7,2021,F),crearRS("Twitter",F,RedSocial),socialNetworkRegister(RedSocial,F,"uwu","owo",RedSocial1),socialNetworkRegister(RedSocial1,F,"lol","XD",RedSocial2),socialNetworkRegister(RedSocial2,F,"katsu","uwu",RedSocial3),socialNetworkLogin(RedSocial3,"lol","XD",RedSocial4).
+% fecha(11,7,2021,F),crearRS("Twitter",F,RedSocial),socialNetworkRegister(RedSocial,F,"uwu","owo",RedSocial1),socialNetworkRegister(RedSocial1,F,"lol","XD",RedSocial2),socialNetworkRegister(RedSocial2,F,"katsu","uwu",RedSocial3),socialNetworkLogin(RedSocial3,"lol","XD",RedSocial4),socialNetworkFollow(RedSocial4,"katsu",RedSocial5).
 
