@@ -120,6 +120,16 @@ buscarUsuario([H|_],Usuario):-
 buscarUsuario([_|T],Usuario):-
     buscarUsuario(T,Usuario).
 
+% Dominio: lista x number
+% Descripcion: permite saber si existe una publicacion dada su id en una lista de publicaciones
+id_to_publicacion([H|_],ID,Retorno):-
+    getPublicacionID(H,ID2),
+    (ID2 = ID),
+    H = Retorno.
+
+id_to_publicacion([_|T],ID,Retorno):-
+    id_to_publicacion(T,ID).
+
 % Dominio: lista x number.
 % Descripcion: permite saber si existe una ID en una lista
 buscarID([H|_],ID):-
@@ -257,9 +267,9 @@ socialNetworkPost(RSin,Fecha,Texto,Etiquetados,RSout):-
     getUserPosts(Autor,AutorPosts),
     % Agrego la publicacion nueva a la lista de publicaciones de la red social y del autor
     append(Publicaciones,[PublicacionNueva],PublicacionesNuevas),
-    append(AutorPosts,[PublicacionNueva],AutorPostsNuevos),
+    append(AutorPosts,[PublicacionNueva],AutorPostsNuevo),
     eliminar_por_ID(UsuarioOnline,Usuarios,UsuariosNuevos),!,
-    crearUsuario(UsuarioOnline,AutorUsername,AutorPassword,AutorFecha,AutorFollowers,AutorPostsNuevos,NuevoAutor),
+    crearUsuario(UsuarioOnline,AutorUsername,AutorPassword,AutorFecha,AutorFollowers,AutorPostsNuevo,NuevoAutor),
     append(UsuariosNuevos,[NuevoAutor],UsuariosFinal),
     crearRedSocial(NombreRS,FechaRS,UsuariosFinal,PublicacionesNuevas,0,RSout).
 
@@ -293,6 +303,52 @@ socialNetworkFollow(RSin,Username,RSout):-
     append(UsuariosNuevos,[UsuarioFinal],UsuariosFinal),
     crearRedSocial(Nombre,FechaRS,UsuariosFinal,Publicaciones,0,RSout).
 
+% Dominio: red social x fecha x number x list x red social
+% Descripcion: funcion que permite compartir una publicacion en las publicaciones del usuario
+socialNetworkShare(RSin,Fecha,IDpost,Etiquetados,RSout):-
+    number(IDpost),
+    is_list(Etiquetados),
+    getNombreRedSocial(RSin,NombreRS),
+    getFechaRedSocial(RSin,FechaRS),
+    getUsuariosRedSocial(RSin,Usuarios),
+    getPublicacionesRedSocial(RSin,Publicaciones),
+    getUsuarioOnline(RSin,UsuarioOnline),
+    id_to_publicacion(Publicaciones,IDpost,PublicacionACompartir),!,
+    buscarEtiquetados(Etiquetados,Usuarios),!,
+    getPublicacionTexto(PublicacionACompartir,PublicacionNT),
+    id_counter(Publicaciones,PublicacionNID),
+    % creo la publicacion compartida
+    crearPublicacion(PublicacionNID,PublicacionNT,[],[],Fecha,Etiquetados,[],PublicacionCompartida),
+    id_to_usuario(Usuarios,UsuarioOnline,Autor),
+    getUsername(Autor,AutorUsername),
+    getPassword(Autor,AutorPassword),
+    getUserFecha(Autor,AutorFecha),
+    getUserFollowers(Autor,AutorFollowers),
+    getUserPosts(Autor,AutorPosts),
+    append(AutorPosts,[PublicacionCompartida],AutorPostsNuevos),
+    getPublicacionID(PublicacionACompartir,NewPublicacionID),
+    getPublicacionReacts(PublicacionACompartir,NewPublicacionReacts),
+    getPublicacionComments(PublicacionACompartir,NewPublicacionComments),
+    getPublicacionFecha(PublicacionACompartir,NewPublicacionFecha),
+    getPublicacionTags(PublicacionACompartir,NewPublicacionTags),
+    getPublicacionShared(PublicacionACompartir,NewPublicacionShared),
+    append(NewPublicacionShared,[UsuarioOnline],PublicacionSharedFinal),
+    % creo la publicacion con la lista de compartidas actualizada
+    crearPublicacion(NewPublicacionID,PublicacionNT,NewPublicacionReacts,NewPublicacionComments,NewPublicacionFecha,NewPublicacionTags,PublicacionSharedFinal,PublicacionActualizada),
+    crearUsuario(UsuarioOnline,AutorUsername,AutorPassword,AutorFecha,AutorFollowers,AutorPostsNuevos,UsuarioActualizado),
+    eliminar_por_ID(UsuarioOnline,Usuarios,Usuarios2),
+    eliminar_por_ID(NewPublicacionID,Publicaciones,Publicaciones1),
+    append(Publicaciones1,[PublicacionCompartida],Publicaciones2),
+    append(Publicaciones2,[PublicacionActualizada],PublicacionesFinal),
+    append(Usuarios2,[UsuarioActualizado],UsuariosFinal),
+    crearRedSocial(NombreRS,FechaRS,UsuariosFinal,PublicacionesFinal,0,RSout).
+
+
+    
+
+
+
+    
 
 
 
