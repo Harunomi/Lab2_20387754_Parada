@@ -143,7 +143,18 @@ username_to_usuario([H|_],Usuario,Retorno):-
     (Usuario = Username),
     Retorno = H.
 username_to_usuario([_|T],Usuario,Retorno):-
-    username_to_usuario(T,Usuario,Retorno).           
+    username_to_usuario(T,Usuario,Retorno). 
+
+% Dominio: list x number x Var
+% Descripcion: a partir de un ID, obtiene el usuario completo de una lista.
+id_to_usuario([H|_],IDaBuscar,Retorno):-
+    getUsuarioID(H,IDEncontrada),
+    (IDaBuscar = IDEncontrada),
+    Retorno = H.
+
+id_to_usuario([_|T],IDaBuscar,Retorno):-
+    id_to_usuario(T,Usuario,Retorno).               
+
 
 % Dominio: list x string x string
 % Descripcion: permite buscar un usuario por su nombre de usuario y contrasena
@@ -164,12 +175,19 @@ eliminar_por_ID(Y,[[Y|_]|Xs],Salida):-
 
 eliminar_por_ID(X,[Y|Xs],[Y|Salida]):-
     eliminar_por_ID(X,Xs,Salida).    
+% Dominio: lista x list
+% Descripcion: busca de la lista de usuarios si la lista de etiquetados existe
+
+buscarEtiquetados([],L).
+buscarEtiquetados([H|T],L):-
+    buscarUsuario(L,H),
+    buscarEtiquetados(T,L).
 
 % Dominio: list x Var
 % Descripcion: Permite obtener el largo de una lista para el ID de un usuario o publicacion
-id_counter(Lista,ID) :- id_counter(Lista,1,ID) .
+id_counter(Lista,ID) :- id_counter(Lista,1,ID).
 
-id_counter( []     , ID , ID ) .
+id_counter( []     , ID , ID ).
 id_counter( [_|Lista] , T , ID ) :-
   T1 is T+1 ,
   id_counter(Lista,T1,ID).
@@ -214,9 +232,36 @@ socialNetworkLogin(RSin,Username,Password,RSout):-
     buscarIDUsuario(Usuarios,Username,ID),!,
     crearRedSocial(Nombre,FechaRS,Usuarios,Publicaciones,ID,RSout).
 
-% Dominio: RedSocial x fecha x string x string x RedSocial
+% Dominio: RedSocial x fecha x string x string list x RedSocial
 % Descripcion: funcion que permite a un usuario loggeado en la red social realizar una publicacion
-% socialNetworkPost(RSin,Fecha,Username,Password,RSout):-
+socialNetworkPost(RSin,Fecha,Texto,Etiquetados,RSout):-
+    string(Texto),
+    is_list(Etiquetados),
+    getNombreRedSocial(RSin,NombreRS),
+    getFechaRedSocial(RSin,FechaRS),
+    getUsuariosRedSocial(RSin,Usuarios),
+    getPublicacionesRedSocial(RSin,Publicaciones),
+    getUsuarioOnline(RSin,UsuarioOnline),
+    (UsuarioOnline>0),
+    buscarEtiquetados(Etiquetados,Usuarios),
+    id_counter(Publicaciones,IDpublicacion),
+    % Creo la publicacion
+    crearPublicacion(IDpublicacion,Texto,[],[],Fecha,Etiquetados,[],PublicacionNueva),
+    % busco al usuario
+    id_to_usuario(Usuarios,UsuarioOnline,Autor),
+    % obtengo sus datos
+    getUsername(Autor,AutorUsername),
+    getPassword(Autor,AutorPassword),
+    getUserFecha(Autor,AutorFecha),
+    getUserFollowers(Autor,AutorFollowers),
+    getUserPosts(Autor,AutorPosts),
+    % Agrego la publicacion nueva a la lista de publicaciones de la red social y del autor
+    append(Publicaciones,[PublicacionNueva],PublicacionesNuevas),
+    append(AutorPosts,[PublicacionNueva],AutorPostsNuevos),
+    eliminar_por_ID(UsuarioOnline,Usuarios,UsuariosNuevos),!,
+    crearUsuario(UsuarioOnline,AutorUsername,AutorPassword,AutorFecha,AutorFollowers,AutorPostsNuevos,NuevoAutor),
+    append(UsuariosNuevos,[NuevoAutor],UsuariosFinal),
+    crearRedSocial(NombreRS,FechaRS,UsuariosFinal,PublicacionesNuevas,0,RSout).
 
 
 % Dominio: RedSocial x string x SocialNetwork
@@ -228,6 +273,7 @@ socialNetworkFollow(RSin,Username,RSout):-
     getUsuariosRedSocial(RSin,Usuarios),
     getPublicacionesRedSocial(RSin,Publicaciones),
     getUsuarioOnline(RSin,UsuarioOnline),
+    (UsuarioOnline>0),
     % me aseguro que el usuario objetivo exista
     buscarUsuario(Usuarios,Username),!,
     % retorno completamente el usuario dado su username
