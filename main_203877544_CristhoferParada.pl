@@ -120,6 +120,15 @@ buscarUsuario([H|_],Usuario):-
 buscarUsuario([_|T],Usuario):-
     buscarUsuario(T,Usuario).
 
+% Dominio: lista x ID
+% Descripcion: permite buscar en una lista de usuarios si este existe o no
+buscar_user_por_ID([H|_],ID):-
+    getUsuarioID(H,ID2),
+    (ID = ID2).
+
+buscar_user_por_ID([_|T],ID):-
+    buscar_user_por_ID(T,ID).    
+
 % Dominio: lista x number
 % Descripcion: permite saber si existe una publicacion dada su id en una lista de publicaciones
 id_to_publicacion([H|_],ID,Retorno):-
@@ -193,6 +202,14 @@ buscarEtiquetados([H|T],L):-
     buscarUsuario(L,H),
     buscarEtiquetados(T,L).
 
+% Dominio: fecha x Var
+% Descripcion: funcion que recibe una fecha como TDA y la retorna como string
+fecha_to_string([D,M,Y],Retorno):-
+    string_concat(D,"/",S1),
+    string_concat(M,"/",S2),
+    string_concat(S1,S2,S3),
+    string_concat(S3,Y,Retorno).    
+
 % Dominio: list x Var
 % Descripcion: Permite obtener el largo de una lista para el ID de un usuario o publicacion
 id_counter(Lista,ID) :- id_counter(Lista,1,ID).
@@ -201,6 +218,112 @@ id_counter( []     , ID , ID ).
 id_counter( [_|Lista] , T , ID ) :-
   T1 is T+1 ,
   id_counter(Lista,T1,ID).
+
+% Dominio: list x Var
+% Descripcion: Funcion que permite obtener el largo de una lista
+largo_lista(Lista,L) :- largo_lista(Lista,0,L).
+
+largo_lista( []     , L , L ).
+largo_lista( [_|Lista] , T , L ) :-
+  T1 is T+1 ,
+  largo_lista(Lista,T1,L).  
+
+% Dominio: list x string, Var
+% Descripcion: Funcion intermediaria que toma un Usuario de una lista de usuarios y lo convierte a string
+iterar_usuarios([H|T],String,Salida):-
+    largo_lista(T,LargoT),
+    not(LargoT = 0),!,
+    usuario_to_string(H,UserString),
+    string_concat(String,UserString,NewString),
+    iterar_usuarios(T,NewString,Salida).    
+
+iterar_usuarios([H|T],String,Salida):-
+    usuario_to_string(H,UserString),
+    string_concat(String,UserString,NewString),
+    Salida = NewString.    
+
+
+% Dominio: list x Var
+% Descripcion: Funcion que imprime los datos de un usuario
+usuario_to_string(User,Retorno):-
+    getUsername(User,Username),
+    getUserFecha(User,Fecha),
+    fecha_to_string(Fecha,FechaCreacion),
+    getUserFollowers(User,Followers),
+    largo_lista(Followers,CFollowers),
+    atom_concat(CFollowers,"",CantFollowers),
+    getUserPosts(User,Posts),
+    largo_lista(Posts,CPosts),
+    atom_concat(CPosts,"",CantPosts),
+    string_concat("\nNombre de usuario: ",Username,S1),
+    string_concat(S1,"\nCuenta creada en la fecha: ",S3),
+    string_concat(S3,FechaCreacion,S4),
+    string_concat(S4,"\nTiene un total de: ",S5),
+    string_concat(S5,CantFollowers,S6),
+    string_concat(S6," followers\n",S7),
+    string_concat(S7,"Tiene un total de: ",S8),
+    string_concat(S8,CantPosts,S9),
+    string_concat(S9," publicaciones\n\n",S10),
+    S10 = Retorno.
+
+% Dominio: list x string x Var
+% Descripcion: Funcion intermediara que permite tomar una publicacion y hacer el llamado de publicacion_to_string, asi con todas las publciaciones
+iterar_publicaciones([H|T],String,Salida):-
+    largo_lista(T,LargoT),
+    not(LargoT = 0),!,
+    publicacion_to_string(H,PublicacionString),
+    string_concat(String,PublicacionString,NewString),
+    iterar_publicaciones(T,NewString,Salida).
+
+iterar_publicaciones([H|T],String,Salida):-
+    publicacion_to_string(H,PublicacionString),
+    string_concat(String,PublicacionString,NewString),
+    Salida = NewString.    
+
+% Dominio: Publicacion x var
+% Descripcion: Funcion que genera un string con todos los datos de una publicacion
+publicacion_to_string(Publicacion,Retorno):-
+    getPublicacionTexto(Publicacion,Texto),
+    getPublicacionReacts(Publicacion,Reacts),
+    largo_lista(Reacts,LargoReacts),
+    % Cantidad de reacciones como string
+    atom_concat(LargoReacts,"",CantReacts),
+    getPublicacionComments(Publicacion,Comments),
+    largo_lista(Comments,LargoComments),
+    % Cantidad de comentarios como string
+    atom_concat(LargoComments,"",CantComments),
+    getPublicacionFecha(Publicacion,PublicacionFecha),
+    fecha_to_string(PublicacionFecha,FechaString),
+    getPublicacionTags(Publicacion,Tags),
+    largo_lista(Tags,LargoTags),
+    % Cantidad de etiquetados como string
+    atom_concat(LargoTags,"",CantTags),
+    atomic_list_concat(Tags,",",TagsAtom),
+    % Etiquetados como string
+    atom_concat(TagsAtom,"",TagsString),
+    getPublicacionShared(Publicacion,Shared),
+    largo_lista(Shared,LargoShared),
+    % Cantidad de compartidas como string
+    atom_concat(LargoShared,"",CantShared),
+    string_concat("\nPublicacion creada en la fecha: ",FechaString,S1),
+    string_concat(S1,"\nTiene como contenido: ",S2),
+    string_concat(S2,Texto,S3),
+    string_concat(S3,"\nTiene un total de ",S4),
+    string_concat(S4,CantReacts,S5),
+    string_concat(S5," reacciones\n",S6),
+    string_concat(S6,"Tiene un total de ",S7),
+    string_concat(S7,CantComments,S8),
+    string_concat(S8," comentarios\n",S9),
+    string_concat(S9,"Tiene un total de ",S10),
+    string_concat(S10,CantTags,S11),
+    string_concat(S11," etiquetados, los cuales son: ",S12),
+    string_concat(S12,TagsString,S13),
+    string_concat(S13,"\nHa sido compartida ",S14),
+    string_concat(S14,CantShared,S15),
+    string_concat(S15," veces\n\n",S16),
+    S16 = Retorno.
+
+
 
 
 /*
@@ -284,6 +407,7 @@ socialNetworkFollow(RSin,Username,RSout):-
     getPublicacionesRedSocial(RSin,Publicaciones),
     getUsuarioOnline(RSin,UsuarioOnline),
     (UsuarioOnline>0),
+    buscar_user_por_ID(Usuarios,UsuarioOnline),
     % me aseguro que el usuario objetivo exista
     buscarUsuario(Usuarios,Username),!,
     % retorno completamente el usuario dado su username
@@ -313,13 +437,15 @@ socialNetworkShare(RSin,Fecha,IDpost,Etiquetados,RSout):-
     getUsuariosRedSocial(RSin,Usuarios),
     getPublicacionesRedSocial(RSin,Publicaciones),
     getUsuarioOnline(RSin,UsuarioOnline),
+    (UsuarioOnline>0),
+    buscar_user_por_ID(Usuarios,UsuarioOnline),
     id_to_publicacion(Publicaciones,IDpost,PublicacionACompartir),!,
     buscarEtiquetados(Etiquetados,Usuarios),!,
     getPublicacionTexto(PublicacionACompartir,PublicacionNT),
     id_counter(Publicaciones,PublicacionNID),
     % creo la publicacion compartida
     crearPublicacion(PublicacionNID,PublicacionNT,[],[],Fecha,Etiquetados,[],PublicacionCompartida),
-    id_to_usuario(Usuarios,UsuarioOnline,Autor),
+    id_to_usuario(Usuarios,UsuarioOnline,Autor),!,
     getUsername(Autor,AutorUsername),
     getPassword(Autor,AutorPassword),
     getUserFecha(Autor,AutorFecha),
@@ -336,37 +462,104 @@ socialNetworkShare(RSin,Fecha,IDpost,Etiquetados,RSout):-
     % creo la publicacion con la lista de compartidas actualizada
     crearPublicacion(NewPublicacionID,PublicacionNT,NewPublicacionReacts,NewPublicacionComments,NewPublicacionFecha,NewPublicacionTags,PublicacionSharedFinal,PublicacionActualizada),
     crearUsuario(UsuarioOnline,AutorUsername,AutorPassword,AutorFecha,AutorFollowers,AutorPostsNuevos,UsuarioActualizado),
-    eliminar_por_ID(UsuarioOnline,Usuarios,Usuarios2),
-    eliminar_por_ID(NewPublicacionID,Publicaciones,Publicaciones1),
+    eliminar_por_ID(UsuarioOnline,Usuarios,Usuarios2),!,
+    eliminar_por_ID(NewPublicacionID,Publicaciones,Publicaciones1),!,
     append(Publicaciones1,[PublicacionCompartida],Publicaciones2),
     append(Publicaciones2,[PublicacionActualizada],PublicacionesFinal),
     append(Usuarios2,[UsuarioActualizado],UsuariosFinal),
     crearRedSocial(NombreRS,FechaRS,UsuariosFinal,PublicacionesFinal,0,RSout).
 
+socialNetworkToString(RSin,Salida):-
+    % Verifico el caso que no haya ningun usuario online
+    getUsuarioOnline(RSin,UsuarioOnline),
+    (UsuarioOnline = 0),!,
+    % Obtengo todos los datos de la red social y los transformo a string
+    getNombreRedSocial(RSin,NombreRS),
+    getFechaRedSocial(RSin,FechaRS),
+    getUsuariosRedSocial(RSin,Usuarios),
+    largo_lista(Usuarios,CantUsuarios),
+    atom_concat(CantUsuarios,"",CantUsuariosStr),
+    largo_lista(Publicaciones,CantPublicaciones),
+    atom_concat(CantPublicaciones,"",CantPublicacionesStr),
+    getPublicacionesRedSocial(RSin,Publicaciones),
+    fecha_to_string(FechaRS,FechaString),
+    % Armo el esqueleto de la Salida
+    string_concat("La red social tiene como nombre: ",NombreRS,S1),
+    string_concat(S1,"\n",S2),
+    string_concat(S2,"Fue creada la fecha: ",S3),
+    string_concat(S3,FechaString,S4),
+    string_concat(S4,"\n",S5),
+    string_concat(S5,"Cuenta con ",S6),
+    string_concat(S6,CantUsuariosStr,S7),
+    string_concat(S7," usuarios, los cuales son:\n",S8),
+    iterar_usuarios(Usuarios,"",StringUsuarios),
+    string_concat(S8,StringUsuarios,S9),
+    string_concat(S9,"\nCuenta con ",S10),
+    string_concat(S10,CantPublicacionesStr,S11),
+    string_concat(S11," publicaciones, las cuales son:\n",S12),
+    iterar_publicaciones(Publicaciones,"",StringPublicaciones),
+    string_concat(S12,StringPublicaciones,S13),
+    Salida = S13,!.
 
-    
+socialNetworkToString(RSin,Salida):-
+    getUsuarioOnline(RSin,UsuarioOnline),
+    (UsuarioOnline>0),
+    getUsuariosRedSocial(RSin,Usuarios),
+    buscar_user_por_ID(Usuarios,UsuarioOnline),
+    id_to_usuario(Usuarios,UsuarioOnline,User),
+    getUsername(User,Username),
+    getUserFecha(User,FechaCreacion),
+    fecha_to_string(FechaCreacion,FechaStr),
+    getUserFollowers(User,Followers),
+    largo_lista(Followers,LargoFollowers),
+    atom_concat(LargoFollowers,"",CantFollowers),
+    getUserPosts(User,Posts),
+    largo_lista(Posts,LargoPosts),
+    atom_concat(LargoPosts,"",CantPublicaciones),
+    iterar_publicaciones(Posts,"",PublicacionesString),
+    string_concat("Nombre de usuario: ",Username,S1),
+    string_concat(S1,"\nFecha de creacion de la cuenta: ",S2),
+    string_concat(S2,FechaStr,S3),
+    string_concat(S3,"\nTotal de followers: ",S4),
+    string_concat(S4,CantFollowers,S5),
+    string_concat(S5,"\nEl usuario tiene en total ",S6),
+    string_concat(S6,CantPublicaciones,S7),
+    string_concat(S7,", las cuales son:\n",S8),
+    string_concat(S8,PublicacionesString,S9),
+    S9 = Salida,!.
+
+
+% Dominio: fecha, integer, string
+% Descripcion: Funcion que permite comentar una publicacion
+%socialNetworkComment(RS,Fecha,IDPost,IDComment,RSout):-
 
 
 
-    
 
-
-
-
-
-
-
-    
-/*
- _____ _                      _           
-|  ___(_)                    | |          
-| |__  _  ___ _ __ ___  _ __ | | ___  ___ 
-|  __|| |/ _ \ '_ ` _ \| '_ \| |/ _ \/ __|
-| |___| |  __/ | | | | | |_) | | (_) \__ \
-\____/| |\___|_| |_| |_| .__/|_|\___/|___/
-     _/ |              | |                
-    |__/               |_|                   
-*/
-% fecha(11,7,2021,F),crearRS("Twitter",F,RedSocial),socialNetworkRegister(RedSocial,F,"uwu","owo",RedSocial1),socialNetworkRegister(RedSocial1,F,"lol","XD",RedSocial2),socialNetworkRegister(RedSocial2,F,"katsu","uwu",RedSocial3),socialNetworkLogin(RedSocial3,"lol","XD",RedSocial4).
-% fecha(11,7,2021,F),crearRS("Twitter",F,RedSocial),socialNetworkRegister(RedSocial,F,"uwu","owo",RedSocial1),socialNetworkRegister(RedSocial1,F,"lol","XD",RedSocial2),socialNetworkRegister(RedSocial2,F,"katsu","uwu",RedSocial3),socialNetworkLogin(RedSocial3,"lol","XD",RedSocial4),socialNetworkFollow(RedSocial4,"katsu",RedSocial5).
-
+% Dominio: red social x fecha x integer x red social
+% Descripcion: funcion que permite darle like a una publicacion o comentario
+% PARA TENER EN CUENTA
+% dentro de mi vision de la red social, un comentario hecho a una publicacion, es una nueva publicacion
+% linkeada a la que se comentó, por lo que evité el uso de la entrada commentID, ya que no hay un TDA para los comentarios.
+socialNetworkLike(RSin,Fecha,ID,RSout):-
+    number(ID),
+    is_list(Fecha),
+    getNombreRedSocial(RSin,NombreRS),
+    getFechaRedSocial(RSin,FechaRS),
+    getUsuarioOnline(RSin,UsuarioOnline),
+    getUsuariosRedSocial(RSin,Usuarios),
+    (UsuarioOnline>0),!,
+    buscar_user_por_ID(Usuarios,UsuarioOnline),
+    getPublicacionesRedSocial(RSin,Publicaciones),
+    id_to_publicacion(Publicaciones,ID,Publicacion),!,
+    getPublicacionTexto(Publicacion,Texto),
+    getPublicacionReacts(Publicacion,Reacts),
+    getPublicacionComments(Publicacion,Comments),
+    getPublicacionFecha(Publicacion,FechaP),
+    getPublicacionTags(Publicacion,Tags),
+    getPublicacionShared(Publicacion,Shared),
+    append(Reacts,[UsuarioOnline],NewReacts),
+    crearPublicacion(ID,Texto,NewReacts,Comments,FechaP,Tags,Shared,NewPost),
+    eliminar_por_ID(ID,Publicaciones,NuevasPublicaciones),
+    append(NuevasPublicaciones,[NewPost],PublicacionesFinal),
+    crearRedSocial(NombreRS,FechaRS,Usuarios,PublicacionesFinal,0).
