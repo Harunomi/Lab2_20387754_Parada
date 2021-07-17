@@ -137,7 +137,7 @@ id_to_publicacion([H|_],ID,Retorno):-
     H = Retorno.
 
 id_to_publicacion([_|T],ID,Retorno):-
-    id_to_publicacion(T,ID).
+    id_to_publicacion(T,ID,Retorno).
 
 % Dominio: lista x number.
 % Descripcion: permite saber si existe una ID en una lista
@@ -169,10 +169,10 @@ username_to_usuario([_|T],Usuario,Retorno):-
 id_to_usuario([H|_],IDaBuscar,Retorno):-
     getUsuarioID(H,IDEncontrada),
     (IDaBuscar = IDEncontrada),
-    Retorno = H.
+    H = Retorno.
 
 id_to_usuario([_|T],IDaBuscar,Retorno):-
-    id_to_usuario(T,Usuario,Retorno).               
+    id_to_usuario(T,IDaBuscar,Retorno).               
 
 
 % Dominio: list x string x string
@@ -323,6 +323,14 @@ publicacion_to_string(Publicacion,Retorno):-
     string_concat(S15," veces\n\n",S16),
     S16 = Retorno.
 
+% Descripcion: Funcion que permite saber si una ID es un comentario de una publicacion
+% Dominio: list x integer
+buscar_comentario([H|_],ID):-
+    getPublicacionComments(H,Comments),
+    buscarID(Comments,ID).
+buscar_comentario([_|T],ID):-
+    buscar_comentario(T,ID).    
+    
 
 
 
@@ -469,6 +477,8 @@ socialNetworkShare(RSin,Fecha,IDpost,Etiquetados,RSout):-
     append(Usuarios2,[UsuarioActualizado],UsuariosFinal),
     crearRedSocial(NombreRS,FechaRS,UsuariosFinal,PublicacionesFinal,0,RSout).
 
+% Dominmio: Red Social X Var
+% Descripcion: Funcion que permite obtener un string con toda la informacion de una red social o un usuario online
 socialNetworkToString(RSin,Salida):-
     % Verifico el caso que no haya ningun usuario online
     getUsuarioOnline(RSin,UsuarioOnline),
@@ -529,12 +539,85 @@ socialNetworkToString(RSin,Salida):-
     S9 = Salida,!.
 
 
-% Dominio: fecha, integer, string
+% Dominio: red social x fecha x integer x integer x string x red social
 % Descripcion: Funcion que permite comentar una publicacion
-%socialNetworkComment(RS,Fecha,IDPost,IDComment,RSout):-
+% caso donde se comente en un comentario
+socialNetworkComment(RSin,Fecha,IDPost,IDComment,Texto,RSout):-
+    number(IDPost),
+    number(IDComment),
+    (IDPost>0),
+    not(IDComment = 0),!,
+    getNombreRedSocial(RSin,NombreRS),
+    getFechaRedSocial(RSin,FechaRS),
+    getUsuariosRedSocial(RSin,Usuarios),
+    getPublicacionesRedSocial(RSin,Publicaciones),
+    getUsuarioOnline(RSin,UsuarioOnline),
+    % me aseguro que IDComment sea un comentario
+    buscar_comentario(Publicaciones,IDComment),!,
+    id_to_publicacion(Publicaciones,IDPost,PublicacionEncontrada),
+    getPublicacionComments(PublicacionEncontrada,PublicacionEComments),
+    buscarID(PublicacionEComments,IDComment),!,
+    id_to_publicacion(Publicaciones,IDComment,ComentarioEncontrado),
+    % creo el comentario
+    id_counter(Publicaciones,IDNuevoComentario),
+    crearPublicacion(IDNuevoComentario,Texto,[],[],Fecha,[],[],NuevoComentario),
+    % borro la publicacion a comentar
+    eliminar_por_ID(IDPost,Publicaciones,Publicaciones1),
+    % Actualizo el comentario comentado, agregando el ID del comentario
+    getPublicacionTexto(ComentarioEncontrado,ComentarioETexto),
+    getPublicacionReacts(ComentarioEncontrado,ComentarioEReacts),
+    getPublicacionComments(ComentarioEncontrado,ComentarioEComments),
+    getPublicacionFecha(ComentarioEncontrado,ComentarioEFecha),
+    getPublicacionTags(ComentarioEncontrado,ComentarioETags),
+    getPublicacionShared(ComentarioEncontrado,ComentarioEShared),
+    append(ComentarioEComments,[IDNuevoComentario],ComentarioNEComments),
+    crearPublicacion(IDPost,ComentarioETexto,ComentarioEReacts,ComentarioNEComments,ComentarioEFecha,ComentarioETags,ComentarioEShared,ComentarioActualizado),
+    append(Publicaciones1,[ComentarioActualizado],Publicaciones2),
+    append(Publicaciones2,[NuevoComentario],Publicaciones3),
+    crearRedSocial(NombreRS,FechaRS,Usuarios,Publicaciones3,0,RSout),!.
 
+socialNetworkComment(RSin,Fecha,IDPost,IDComment,Texto,RSout):-
+    number(IDPost),
+    number(IDComment),
+    (IDPost>0),
+    (IDComment = 0),
+    getNombreRedSocial(RSin,NombreRS),
+    getFechaRedSocial(RSin,FechaRS),
+    getUsuariosRedSocial(RSin,Usuarios),
+    getPublicacionesRedSocial(RSin,Publicaciones),
+    getUsuarioOnline(RSin,UsuarioOnline),
+    % verifico si la publicacion existe y la retorno
+    id_to_publicacion(Publicaciones,IDPost,PublicacionEncontrada),!,
+    % creo el comentario
+    id_counter(Publicaciones,IDNuevoComentario),
+    crearPublicacion(IDNuevoComentario,Texto,[],[],Fecha,[],[],NuevoComentario),
+    % Borro la publicacion comentada de la lista de publicaciones
+    eliminar_por_ID(IDPost,Publicaciones,Publicaciones1),
+    % Actualizo la publicacion con la ID del nuevo comentario
+    getPublicacionTexto(PublicacionEncontrada,PublicacionETexto),
+    getPublicacionReacts(PublicacionEncontrada,PublicacionEReacts),
+    getPublicacionComments(PublicacionEncontrada,PublicacionEComments),
+    getPublicacionFecha(PublicacionEncontrada,PublicacionEFecha),
+    getPublicacionTags(PublicacionEncontrada,PublicacionETags),
+    getPublicacionShared(PublicacionEncontrada,PublicacionEShared),
+    append(PublicacionEComments,[IDNuevoComentario],PublicacionENComments),
+    % creo la publicacion actualizada y la agrego a la lista de publicaciones
+    crearPublicacion(IDPost,PublicacionETexto,PublicacionEReacts,PublicacionENComments,PublicacionEFecha,PublicacionETags,PublicacionEShared,PublicacionActualizada),
+    append(Publicaciones1,[PublicacionActualizada],Publicaciones2),
+    append(Publicaciones2,[NuevoComentario],Publicaciones3),
+    id_to_usuario(Usuarios,UsuarioOnline,Autor),
+    getUsername(Autor,Username),
+    getPassword(Autor,Password),
+    getUserFecha(Autor,AutorFecha),
+    getUserFollowers(Autor,Followers),
+    getUserPosts(Autor,AutorPosts),
+    append(AutorPosts,[NuevoComentario],AutorPosts1),
+    eliminar_por_ID(UsuarioOnline,Usuarios,Usuarios1),!,
+    crearUsuario(UsuarioOnline,Username,Password,AutorFecha,Followers,AutorPosts1,NuevoAutor),
+    append(Usuarios1,[NuevoAutor],Usuarios2),
+    crearRedSocial(NombreRS,FechaRS,Usuarios2,Publicaciones3,0,RSout),!.
 
-
+    
 
 % Dominio: red social x fecha x integer x red social
 % Descripcion: funcion que permite darle like a una publicacion o comentario
